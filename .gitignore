@@ -1,0 +1,19 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.env
+
+# Virtual environments
+.venv
+
+# Secrets / local credential exports
+cookies.txt
+data_gathering/youtube/cookies.txt
+
+# Local planning docs — keep out of the repo
+rag_plan.md
+todos.md
