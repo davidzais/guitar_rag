@@ -1,4 +1,5 @@
 from dataclasses import dataclass
+from pprint import pprint
 import tiktoken
 import structlog
 from pathlib import Path
@@ -6,6 +7,7 @@ import json
 import re
 from langchain_openai import OpenAIEmbeddings
 from dotenv import load_dotenv
+from models.transcript import Transcript, Segment
 
 
 load_dotenv()
@@ -33,24 +35,22 @@ def load_data_filelist():
     return files
 
 
-def load_transcript(path: Path) -> str:
-    with open(path, 'r') as file:
-        transcript =  json.load(file)
+def load_transcript(path: Path) -> Transcript:
+    with open(path, 'r') as file:           
+        return Transcript.model_validate(json.load(file)  )
 
-    return transcript
-
-def filter_transcript(segments: list[dict]):
+def filter_transcript(segments: list[Segment]):
     cleaned = []
     for segment in segments:        
-        text = PATTERN_CLEAN.sub("", segment["text"]).strip()  
+        text = PATTERN_CLEAN.sub("", segment.text).strip()  
         if text:
-            segment["text"] = text
+            segment.text = text
             cleaned.append(segment)                                                        
     return cleaned
 
 
     
-def chunk_transcript(data: dict) -> list[Chunk]:
+def chunk_transcript(transcript: Transcript) -> list[Chunk]:
     """Accumulate filtered segments into ~400-token chunks (tiktoken),
     recording the start time of the first segment in each chunk and
     copying video_id/title/url onto every chunk."""
@@ -61,21 +61,21 @@ def chunk_transcript(data: dict) -> list[Chunk]:
     chunk_start_time: float = 0.0
     
     encoding = tiktoken.get_encoding("cl100k_base")
-    for segment in data["segments"][0]:
+    for segment in transcript.segments:
         if not text_buffer:
-            chunk_start_time = segment["start"]
+            chunk_start_time = segment.start
 
-        tokens = encoding.encode(segment["text"])
-        text_buffer.append(segment["text"])
+        tokens = encoding.encode(segment.text)
+        text_buffer.append(segment.text)
         token_count += len(tokens)
         if token_count > MAX_CHUNK_SIZE:                 
             chunk = Chunk(
                 text = " ".join(text_buffer),
-                video_id = data["video_id"],
-                title = data["title"],
-                url = data["url"],
+                video_id = transcript.video_id,
+                title = transcript.title,
+                url = transcript.url,
                 chunk_index = chunk_index,
-                instructor = data["instructor"],
+                instructor = transcript.instructor,
                 start_time= chunk_start_time        
             )
             chunk_index += 1
@@ -86,12 +86,12 @@ def chunk_transcript(data: dict) -> list[Chunk]:
     if len(text_buffer) > 0:
         chunk = Chunk(
                 text = " ".join(text_buffer),
-                video_id = data["video_id"],
-                title = data["title"],
-                url = data["url"],
+                video_id = transcript.video_id,
+                title = transcript.title,
+                url = transcript.url,
                 chunk_index = chunk_index,
-                instructor = data["instructor"],
-                start_time = chunk_start_time             
+                instructor = transcript.instructor,
+                start_time= chunk_start_time               
             )
         chunk_list.append(chunk)
 
@@ -103,9 +103,10 @@ def main():
     for path in file_list:
         try:
             transcript = load_transcript(path)  
-            transcript["segments"][0] = filter_transcript(transcript["segments"][0])
+            transcript.segments = filter_transcript(transcript.segments)
             chunks = chunk_transcript(transcript) 
-            
+            pprint( chunks )
+            break
 
         except Exception as e:
             print( str(e)  )

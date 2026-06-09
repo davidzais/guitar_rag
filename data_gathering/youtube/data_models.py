@@ -1,5 +1,10 @@
 from pydantic import BaseModel
 
+class Segment(BaseModel):    
+    text: str          # from metadata.json
+    start: float | None
+    duration: float | None
+
 class Transcript(BaseModel):
     title: str   
     text: str      # cleaned chunk text
@@ -8,11 +13,6 @@ class Transcript(BaseModel):
     url: str            # base YouTube URL    
     language: str
     is_generated: bool    
-    char_count: int
-    instructor:str
+    char_count: int  
     segments: list[Segment]   
 
-class Segment(BaseModel):    
-    text: str          # from metadata.json
-    start: float | None
-    duration: float | None

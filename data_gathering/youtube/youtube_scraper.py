@@ -23,7 +23,7 @@ def download_transcript(video_id, title, presenter, languages=["en"]):
 
     try:
         # Create API instance
-        session = requests.Session()
+        #session = requests.Session()
 
 # Load cookies from exported cookies.txt
        
