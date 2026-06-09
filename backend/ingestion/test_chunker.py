@@ -8,30 +8,35 @@ named test_*. No registration, no base class needed — just write functions.
 """
 
 from ingestion.chunker import Chunk, chunk_transcript, filter_transcript
+from models.transcript import Transcript, Segment
 
 
-def _make_data(segments: list[dict]) -> dict:
-    """Build a transcript dict shaped like the real scraper output.
+def _make_transcript(segments: list[dict]) -> Transcript:
+    """Build a Transcript shaped like real scraper output (flat segments).
 
-    The segments are wrapped in an extra list because chunk_transcript reads
-    data["segments"][0] — that nesting mirrors how your scraper saved them.
-    A test fixture should match the real data shape, quirks and all.
+    Pydantic coerces each plain dict into a `Segment`, so we can pass dicts
+    here and get back a fully-typed `Transcript` — matching what
+    `load_transcript` produces in production.
     """
-    return {
-        "video_id": "abc123",
-        "title": "Test Lesson",
-        "url": "https://www.youtube.com/watch?v=abc123",
-        "instructor": "jack_ruch",
-        "segments": [segments],
-    }
+    return Transcript(
+        video_id="abc123",
+        title="Test Lesson",
+        url="https://www.youtube.com/watch?v=abc123",
+        instructor="jack_ruch",
+        text=" ".join(s["text"] for s in segments),
+        language="en",
+        is_generated=True,
+        char_count=0,
+        segments=segments,
+    )
 
 
 def test_drops_pure_noise_segments():
     # Arrange — build the smallest input that proves the behavior.
     # One real line of speech, plus one segment that is ONLY a [music] tag.
     segments = [
-        {"text": "today we play the blues", "start": 1.0, "duration": 2.0},
-        {"text": "[music]", "start": 3.0, "duration": 4.0},
+        Segment(text="today we play the blues", start=1.0, duration=2.0),
+        Segment(text="[music]", start=3.0, duration=4.0),
     ]
 
     # Act — call the one function under test.
@@ -39,13 +44,13 @@ def test_drops_pure_noise_segments():
 
     # Assert — the music-only segment is gone, the real one survives.
     assert len(result) == 1
-    assert result[0]["text"] == "today we play the blues"
+    assert result[0].text == "today we play the blues"
 
 
 def test_strips_inline_marker_but_keeps_segment():
     # Arrange — a real line that happens to carry a ">>" speaker marker.
     segments = [
-        {"text": ">> so the G chord", "start": 5.0, "duration": 1.5},
+        Segment(text=">> so the G chord", start=5.0, duration=1.5),
     ]
 
     # Act
@@ -54,8 +59,8 @@ def test_strips_inline_marker_but_keeps_segment():
     # Assert — the marker is scrubbed, the words stay, and the timestamp
     # is preserved (the chunker needs `start` later for citations).
     assert len(result) == 1
-    assert result[0]["text"] == "so the G chord"
-    assert result[0]["start"] == 5.0
+    assert result[0].text == "so the G chord"
+    assert result[0].start == 5.0
 
 
 # ---------------------------------------------------------------------------
@@ -74,14 +79,14 @@ def test_all_segments_fit_in_one_chunk(monkeypatch):
     # together stay well under the limit should collapse into ONE chunk,
     # which only the trailing flush (after the loop) can produce.
     monkeypatch.setattr("ingestion.chunker.MAX_CHUNK_SIZE", 1000)
-    data = _make_data([
+    transcript = _make_transcript([
         {"text": "we start on the G chord", "start": 0.0, "duration": 2.0},
         {"text": "then move to C", "start": 2.0, "duration": 1.5},
         {"text": "and finish on D", "start": 3.5, "duration": 1.5},
     ])
 
     # Act
-    chunks = chunk_transcript(data)
+    chunks = chunk_transcript(transcript)
 
     # Assert — exactly one chunk, texts space-joined in order...
     assert len(chunks) == 1
@@ -103,14 +108,14 @@ def test_forced_split_one_chunk_per_segment(monkeypatch):
     # flush on its own, so we get one chunk per segment. This exercises the
     # split path: chunk_index incrementing and a fresh start_time per chunk.
     monkeypatch.setattr("ingestion.chunker.MAX_CHUNK_SIZE", 1)
-    data = _make_data([
+    transcript = _make_transcript([
         {"text": "alpha beta", "start": 0.0, "duration": 1.0},
         {"text": "gamma delta", "start": 10.0, "duration": 1.0},
         {"text": "epsilon zeta", "start": 20.0, "duration": 1.0},
     ])
 
     # Act
-    chunks = chunk_transcript(data)
+    chunks = chunk_transcript(transcript)
 
     # Assert — three chunks, each carrying its own segment, index, and start.
     assert len(chunks) == 3
