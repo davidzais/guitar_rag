@@ -103,22 +103,70 @@ def test_all_segments_fit_in_one_chunk(monkeypatch):
     assert chunk.instructor == "jack_ruch"
 
 
-def test_forced_split_one_chunk_per_segment(monkeypatch):
-    # Arrange — a limit of 1 token forces every segment (each >1 token) to
-    # flush on its own, so we get one chunk per segment. This exercises the
-    # split path: chunk_index incrementing and a fresh start_time per chunk.
-    monkeypatch.setattr("ingestion.chunker.MAX_CHUNK_SIZE", 1)
-    transcript = _make_transcript([
-        {"text": "alpha beta", "start": 0.0, "duration": 1.0},
-        {"text": "gamma delta", "start": 10.0, "duration": 1.0},
-        {"text": "epsilon zeta", "start": 20.0, "duration": 1.0},
+# ---------------------------------------------------------------------------
+# Overlap tests
+#
+# We patch BOTH knobs so the ratio stays realistic in miniature: a small chunk
+# size with an even smaller overlap. (If overlap >= chunk size, chunks grow
+# without bound — see the OVERLAP_TOKEN_SIZE note in chunker.py.) We assert the
+# overlap *property* — the seam between chunks — not exact token-dependent text,
+# so these stay green even if tiktoken's counts shift.
+# ---------------------------------------------------------------------------
+
+# A dozen distinct words so overlap is spottable and nothing collides.
+_WORDS = [
+    "alpha", "bravo", "charlie", "delta", "echo", "foxtrot",
+    "golf", "hotel", "india", "juliet", "kilo", "lima",
+]
+
+
+def _make_word_transcript() -> Transcript:
+    """One word per segment, with increasing start times (0.0, 1.0, 2.0, ...)."""
+    return _make_transcript([
+        {"text": w, "start": float(i), "duration": 1.0}
+        for i, w in enumerate(_WORDS)
     ])
 
-    # Act
-    chunks = chunk_transcript(transcript)
 
-    # Assert — three chunks, each carrying its own segment, index, and start.
-    assert len(chunks) == 3
-    assert [c.text for c in chunks] == ["alpha beta", "gamma delta", "epsilon zeta"]
-    assert [c.chunk_index for c in chunks] == [0, 1, 2]
-    assert [c.start_time for c in chunks] == [0.0, 10.0, 20.0]
+def test_split_produces_sequentially_indexed_chunks(monkeypatch):
+    # Arrange — small chunk + small overlap forces several chunks.
+    monkeypatch.setattr("ingestion.chunker.MAX_CHUNK_SIZE", 4)
+    monkeypatch.setattr("ingestion.chunker.OVERLAP_TOKEN_SIZE", 1)
+
+    # Act
+    chunks = chunk_transcript(_make_word_transcript())
+
+    # Assert — we got multiple chunks, indexes run 0,1,2,... with no gaps,
+    # none are empty, and start times never go backwards.
+    assert len(chunks) >= 2
+    assert [c.chunk_index for c in chunks] == list(range(len(chunks)))
+    assert all(c.text for c in chunks)
+    starts = [c.start_time for c in chunks]
+    assert starts == sorted(starts)
+    assert starts[0] == 0.0
+
+
+def test_consecutive_chunks_overlap_at_the_seam(monkeypatch):
+    # Arrange
+    monkeypatch.setattr("ingestion.chunker.MAX_CHUNK_SIZE", 4)
+    monkeypatch.setattr("ingestion.chunker.OVERLAP_TOKEN_SIZE", 1)
+
+    # Act
+    chunks = chunk_transcript(_make_word_transcript())
+
+    # Assert 1 — nothing was lost: every original word still appears somewhere.
+    seen = " ".join(c.text for c in chunks).split()
+    assert set(seen) == set(_WORDS)
+
+    # Assert 2 — THE SEAM. Each chunk must OPEN with a non-empty run of words
+    # that the previous chunk ENDED with. That shared run is the overlap: the
+    # tail of chunk N reappears at the head of chunk N+1.
+    assert len(chunks) >= 2
+    for prev, nxt in zip(chunks, chunks[1:]):
+        prev_words = prev.text.split()
+        next_words = nxt.text.split()
+        shares_seam = any(
+            prev_words[-k:] == next_words[:k]
+            for k in range(1, len(prev_words) + 1)
+        )
+        assert shares_seam, f"no overlap seam between {prev_words} and {next_words}"

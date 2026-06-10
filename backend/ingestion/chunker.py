@@ -5,7 +5,6 @@ import structlog
 from pathlib import Path
 import json
 import re
-from langchain_openai import OpenAIEmbeddings
 from dotenv import load_dotenv
 from models.transcript import Transcript, Segment
 
@@ -15,7 +14,8 @@ load_dotenv()
 FILTER_TEXT = ["[music]", "[singing]", ">>", "[applause]"]
 PATTERN_CLEAN = re.compile("|".join(re.escape(f) for f in FILTER_TEXT))
 MAX_CHUNK_SIZE = 400
-all_chunks = []
+
+OVERLAP_TOKEN_SIZE = 50 #NOTE this value should always be well below the MAX_CHUNK_SIZE, rith now its ~12% which is good
 logger = structlog.get_logger()
 
 @dataclass
@@ -56,47 +56,63 @@ def chunk_transcript(transcript: Transcript) -> list[Chunk]:
     copying video_id/title/url onto every chunk."""
     token_count = 0
     chunk_index = 0  
-    text_buffer: list[str] = []
+    text_buffer: list[dict] = []
     chunk_list: list[Chunk] = []
-    chunk_start_time: float = 0.0
+   
     
     encoding = tiktoken.get_encoding("cl100k_base")
-    for segment in transcript.segments:
-        if not text_buffer:
-            chunk_start_time = segment.start
-
+    for segment in transcript.segments:       
         tokens = encoding.encode(segment.text)
-        text_buffer.append(segment.text)
-        token_count += len(tokens)
-        if token_count > MAX_CHUNK_SIZE:                 
+       
+        segment_token_count = len(tokens)
+        token_count += segment_token_count
+        text_buffer.append({"text":segment.text, "token_count":segment_token_count, "start_time": segment.start})
+        if token_count > MAX_CHUNK_SIZE:    
+            # get the overlap chunks
+            overlap_segment_count = get_offset_token_segment_count(text_buffer)  
+            overlap_segment_data =  text_buffer[-overlap_segment_count:]                
             chunk = Chunk(
-                text = " ".join(text_buffer),
+                text = " ".join( seg["text"] for seg in text_buffer),
                 video_id = transcript.video_id,
                 title = transcript.title,
                 url = transcript.url,
                 chunk_index = chunk_index,
                 instructor = transcript.instructor,
-                start_time= chunk_start_time        
+                start_time = text_buffer[0]["start_time"]       
             )
             chunk_index += 1
-            token_count = 0
-            text_buffer = []          
+            text_buffer = overlap_segment_data
+            token_count = sum(seg["token_count"] for seg in text_buffer)
+   
             chunk_list.append(chunk)
 
     if len(text_buffer) > 0:
         chunk = Chunk(
-                text = " ".join(text_buffer),
+                text = " ".join(seg["text"] for seg in text_buffer),
                 video_id = transcript.video_id,
                 title = transcript.title,
                 url = transcript.url,
                 chunk_index = chunk_index,
                 instructor = transcript.instructor,
-                start_time= chunk_start_time               
+                start_time = text_buffer[0]["start_time"]                 
             )
         chunk_list.append(chunk)
 
     return chunk_list
 
+def get_offset_token_segment_count(info_buffer: list[dict], offset_token_size=OVERLAP_TOKEN_SIZE):
+    # iterate from the end of info_buffer and sum the token counts untile we reach ~offset_token_size
+    # the number of 
+    token_count = 0
+    segment_count = 0
+    for item in info_buffer[::-1]:
+        token_count += item["token_count"]
+        segment_count += 1
+
+        if token_count > offset_token_size:
+            return segment_count
+    
+    return segment_count # well always go back at least 1 chunk of data for overlap
 
 def main():
     file_list = load_data_filelist()
