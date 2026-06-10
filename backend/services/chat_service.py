@@ -25,7 +25,8 @@ def chat(request: ChatRequest) -> ChatResponse:
         question_counts[request.conversation_id] = count + 1
         return ChatResponse(
             reply=reply_message,
-            questions_remaining=MAX_QUESTIONS - question_counts[request.conversation_id],
+            questions_remaining=MAX_QUESTIONS
+            - question_counts[request.conversation_id],
         )
     except LimitExceededError:
         raise

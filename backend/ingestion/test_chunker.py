@@ -79,11 +79,13 @@ def test_all_segments_fit_in_one_chunk(monkeypatch):
     # together stay well under the limit should collapse into ONE chunk,
     # which only the trailing flush (after the loop) can produce.
     monkeypatch.setattr("ingestion.chunker.MAX_CHUNK_SIZE", 1000)
-    transcript = _make_transcript([
-        {"text": "we start on the G chord", "start": 0.0, "duration": 2.0},
-        {"text": "then move to C", "start": 2.0, "duration": 1.5},
-        {"text": "and finish on D", "start": 3.5, "duration": 1.5},
-    ])
+    transcript = _make_transcript(
+        [
+            {"text": "we start on the G chord", "start": 0.0, "duration": 2.0},
+            {"text": "then move to C", "start": 2.0, "duration": 1.5},
+            {"text": "and finish on D", "start": 3.5, "duration": 1.5},
+        ]
+    )
 
     # Act
     chunks = chunk_transcript(transcript)
@@ -115,17 +117,26 @@ def test_all_segments_fit_in_one_chunk(monkeypatch):
 
 # A dozen distinct words so overlap is spottable and nothing collides.
 _WORDS = [
-    "alpha", "bravo", "charlie", "delta", "echo", "foxtrot",
-    "golf", "hotel", "india", "juliet", "kilo", "lima",
+    "alpha",
+    "bravo",
+    "charlie",
+    "delta",
+    "echo",
+    "foxtrot",
+    "golf",
+    "hotel",
+    "india",
+    "juliet",
+    "kilo",
+    "lima",
 ]
 
 
 def _make_word_transcript() -> Transcript:
     """One word per segment, with increasing start times (0.0, 1.0, 2.0, ...)."""
-    return _make_transcript([
-        {"text": w, "start": float(i), "duration": 1.0}
-        for i, w in enumerate(_WORDS)
-    ])
+    return _make_transcript(
+        [{"text": w, "start": float(i), "duration": 1.0} for i, w in enumerate(_WORDS)]
+    )
 
 
 def test_split_produces_sequentially_indexed_chunks(monkeypatch):
@@ -166,7 +177,6 @@ def test_consecutive_chunks_overlap_at_the_seam(monkeypatch):
         prev_words = prev.text.split()
         next_words = nxt.text.split()
         shares_seam = any(
-            prev_words[-k:] == next_words[:k]
-            for k in range(1, len(prev_words) + 1)
+            prev_words[-k:] == next_words[:k] for k in range(1, len(prev_words) + 1)
         )
         assert shares_seam, f"no overlap seam between {prev_words} and {next_words}"

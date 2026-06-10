@@ -27,10 +27,13 @@ def reset_state():
 # Happy-path
 # ---------------------------------------------------------------------------
 
+
 @patch.object(chat_service, "agent")
 def test_chat_returns_reply(mock_agent):
     mock_agent.invoke.return_value = make_invoke_result("Use a linter.")
-    resp = client.post("/chat", json={"conversation_id": "t1", "message": "clean code tips?"})
+    resp = client.post(
+        "/chat", json={"conversation_id": "t1", "message": "clean code tips?"}
+    )
     assert resp.status_code == 200
     body = resp.json()
     assert body["reply"] == "Use a linter."
@@ -50,6 +53,7 @@ def test_questions_remaining_decrements(mock_agent):
 # Conversation isolation
 # ---------------------------------------------------------------------------
 
+
 @patch.object(chat_service, "agent")
 def test_separate_conversations_tracked_independently(mock_agent):
     mock_agent.invoke.return_value = make_invoke_result("answer")
@@ -62,6 +66,7 @@ def test_separate_conversations_tracked_independently(mock_agent):
 # ---------------------------------------------------------------------------
 # Rate-limiting
 # ---------------------------------------------------------------------------
+
 
 @patch.object(chat_service, "agent")
 def test_question_limit_returns_429(mock_agent):
@@ -88,10 +93,13 @@ def test_question_limit_does_not_affect_other_conversations(mock_agent):
 # Agent invocation contract
 # ---------------------------------------------------------------------------
 
+
 @patch.object(chat_service, "agent")
 def test_agent_called_with_correct_thread_id(mock_agent):
     mock_agent.invoke.return_value = make_invoke_result("answer")
-    client.post("/chat", json={"conversation_id": "my-thread", "message": "what is Python?"})
+    client.post(
+        "/chat", json={"conversation_id": "my-thread", "message": "what is Python?"}
+    )
     mock_agent.invoke.assert_called_once_with(
         {"messages": [{"role": "user", "content": "what is Python?"}]},
         config={"configurable": {"thread_id": "my-thread"}},
@@ -101,6 +109,7 @@ def test_agent_called_with_correct_thread_id(mock_agent):
 # ---------------------------------------------------------------------------
 # Error handling
 # ---------------------------------------------------------------------------
+
 
 @patch.object(chat_service, "agent")
 def test_agent_exception_returns_500(mock_agent):

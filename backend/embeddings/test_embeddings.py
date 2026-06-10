@@ -12,7 +12,6 @@ There are three kinds of test here:
 """
 
 import os
-import json
 from pathlib import Path
 from unittest.mock import MagicMock
 
@@ -56,7 +55,7 @@ def provider(monkeypatch):
 #    so this needs no API key.
 # ---------------------------------------------------------------------------
 def test_factory_returns_openai_provider(monkeypatch):
-    monkeypatch.setattr("openai.OpenAI", MagicMock())   # construction needs no key
+    monkeypatch.setattr("openai.OpenAI", MagicMock())  # construction needs no key
     monkeypatch.setenv("EMBEDDING_PROVIDER", "openai")  # force the "openai" branch
     provider = get_embedding_provider()
     assert isinstance(provider, OpenAIEmbeddingProvider)
