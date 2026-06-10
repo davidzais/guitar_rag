@@ -17,7 +17,9 @@ from services import chat_service
 
 logger = structlog.get_logger()
 
-_cors_origins = [o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")]
+_cors_origins = [
+    o.strip() for o in os.getenv("CORS_ORIGINS", "http://localhost:5173").split(",")
+]
 _rate_limit = os.getenv("RATE_LIMIT", "20/minute")
 
 limiter = Limiter(key_func=get_remote_address)
@@ -36,7 +38,9 @@ app.add_middleware(
 )
 
 
-def _verify_api_key(credentials: HTTPAuthorizationCredentials = Security(_bearer)) -> None:
+def _verify_api_key(
+    credentials: HTTPAuthorizationCredentials = Security(_bearer),
+) -> None:
     api_key = os.getenv("API_KEY", "")
     if api_key and not secrets.compare_digest(credentials.credentials, api_key):
         raise HTTPException(status_code=401, detail="Invalid API key")
@@ -45,7 +49,9 @@ def _verify_api_key(credentials: HTTPAuthorizationCredentials = Security(_bearer
 @app.exception_handler(RateLimitExceeded)
 async def rate_limit_handler(request: Request, exc: RateLimitExceeded) -> JSONResponse:
     logger.warning("rate_limit_exceeded", client=get_remote_address(request))
-    return JSONResponse(status_code=429, content={"detail": "Too many requests. Please slow down."})
+    return JSONResponse(
+        status_code=429, content={"detail": "Too many requests. Please slow down."}
+    )
 
 
 @app.post("/chat", response_model=ChatResponse, dependencies=[Depends(_verify_api_key)])

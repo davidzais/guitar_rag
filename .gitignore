@@ -17,3 +17,7 @@ data_gathering/youtube/cookies.txt
 # Local planning docs — keep out of the repo
 rag_plan.md
 todos.md
+
+# Local Claude Code guidance (personal training process — read from disk, not committed)
+CLAUDE.md
+.claude/
