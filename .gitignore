@@ -14,6 +14,9 @@ wheels/
 cookies.txt
 data_gathering/youtube/cookies.txt
 
+# Scraped transcript data — regenerable output of the scraper, not source
+data_gathering/transcripts/
+
 # Local planning docs — keep out of the repo
 rag_plan.md
 todos.md
