@@ -12,22 +12,11 @@ There are three kinds of test here:
 """
 
 import os
-from pathlib import Path
 from unittest.mock import MagicMock
 
 import pytest
 
-from ingestion.chunker import load_transcript
-from models.transcript import Transcript
 from embeddings.embeddings import get_embedding_provider, OpenAIEmbeddingProvider
-
-
-# ---------------------------------------------------------------------------
-# Helper: load a real transcript file that sits next to this test.
-# ---------------------------------------------------------------------------
-def load_test_transcript() -> Transcript:
-    this_dir = Path(__file__).resolve().parent
-    return load_transcript(this_dir / "transcript_test_data.json")
 
 
 # ---------------------------------------------------------------------------

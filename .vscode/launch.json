@@ -1,0 +1,29 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            // Runs `python -m ingestion.ingest` from backend/, so backend/ is the
+            // import root (models, embeddings, ingestion all resolve). Mirrors how
+            // you run it in the terminal.
+            "name": "Debug: ingestion.ingest",
+            "type": "debugpy",
+            "request": "launch",
+            "module": "ingestion.ingest",
+            "cwd": "${workspaceFolder}/backend",
+            "console": "integratedTerminal"
+        },
+        {
+            // Default "run the open file by path" — note this puts the FILE'S
+            // folder on sys.path, not backend/, so it breaks flat imports like
+            // `from models.transcript import ...`. Fine for standalone scripts.
+            "name": "Python Debugger: Current File",
+            "type": "debugpy",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal"
+        }
+    ]
+}
