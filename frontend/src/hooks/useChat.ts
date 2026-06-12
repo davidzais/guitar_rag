@@ -1,11 +1,13 @@
 import { useCallback, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { sendMessage } from '@/lib/api'
+import type { Source } from '@/lib/schemas'
 
 export interface Message {
   id: string
   role: 'user' | 'assistant'
-  content: string
+  content: string,
+  sources: Source[]
 }
 
 export function useChat() {
@@ -19,13 +21,14 @@ export function useChat() {
     onMutate: (message) => {
       setMessages((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), role: 'user', content: message },
+        { id: crypto.randomUUID(), role: 'user', content: message, sources: [] },
       ])
     },
     onSuccess: (data) => {
+      console.log(data)
       setMessages((prev) => [
         ...prev,
-        { id: crypto.randomUUID(), role: 'assistant', content: data.reply },
+        { id: crypto.randomUUID(), role: 'assistant', content: data.reply, sources: data.sources },
       ])
       setQuestionsRemaining(data.questions_remaining)
     },

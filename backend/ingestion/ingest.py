@@ -29,7 +29,7 @@ def main():
     print(f"have {len(file_list)} transcripts to process")
     embedding_provider: EmbeddingProvider = get_embedding_provider()
     vector_store_provider: VectorStore = get_vector_store_provider()
-    total_messgees = 0
+    total_messagees = 0
     for path in file_list:
         try:
             transcript = load_transcript(path)
@@ -58,12 +58,12 @@ def main():
                     for chunk, vec in zip(batch, embedding_list)               
                 ]                                
                 vector_store_provider.upsert( records) 
-                total_messgees += len(records)                    
+                total_messagees += len(records)                    
             
         except Exception as e:
             print(str(e))
 
-    print(f"sendsenting {total_messgees} to vector database")
+    print(f"sendsenting {total_messagees} to vector database")
     print('completed embedding run')
 
 

@@ -5,3 +5,4 @@ class Source(BaseModel):
     url: str
     instructor: str
     start_time: float | None
+    snippet: str

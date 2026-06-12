@@ -36,7 +36,7 @@ export function MessageInput({ onSend, isPending, disabled }: Props) {
         placeholder={
           disabled
             ? 'Question limit reached for this conversation'
-            : 'Ask a software engineering question…'
+            : 'Ask a guitar playing question…'
         }
         disabled={isPending || disabled}
         rows={4}

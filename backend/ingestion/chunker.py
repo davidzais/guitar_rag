@@ -24,7 +24,7 @@ class Chunk:
     url: str  # base YouTube URL
     title: str  # from metadata.json
     start_time: float | None  # seconds into video — used to build timestamp URL
-    chunk_index: int
+    chunk_index: int    
 
 
 @dataclass(frozen=True)
@@ -98,7 +98,7 @@ def build_chunk(
         url=transcript.url,
         chunk_index=index,
         instructor=transcript.instructor,
-        start_time=buffer[0].start_time,
+        start_time=buffer[0].start_time
     )
     return chunk
 
