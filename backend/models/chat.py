@@ -1,4 +1,5 @@
 from pydantic import BaseModel, Field
+from models.source import Source
 
 
 class ChatRequest(BaseModel):
@@ -8,4 +9,5 @@ class ChatRequest(BaseModel):
 
 class ChatResponse(BaseModel):
     reply: str
+    sources: list[Source]
     questions_remaining: int
