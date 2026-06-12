@@ -2,6 +2,7 @@ from dataclasses import dataclass
 from typing import Protocol, Any
 import os
 from dotenv import load_dotenv
+from models.query import QueryResponse
 
 load_dotenv()
 
@@ -13,11 +14,11 @@ class VectorRecord:
     
 
 class VectorStore(Protocol):
-    def upsert(self, records: list[VectorRecord]): ...
-    def query(self, vector: list[float], top_k: int = 5): ...
+    def upsert(self, records: list[VectorRecord], namespace=""): ...
+    def query(self, vector: list[float], top_k: int = 5, namespace="") -> QueryResponse: ...
 
 class PineconeVectorStore:
-    def __init__(self):
+    def __init__(self) -> None:
         from pinecone import Pinecone
         self.index_name = os.getenv("PINECONE_INDEX_NAME", "guitar-rag")
         #this constructor gets the PINECONE_API_KEY from envireonment
@@ -25,25 +26,34 @@ class PineconeVectorStore:
         self.index = self.pc.Index(self.index_name)
         
 
-    def upsert(self, records: list[VectorRecord]) -> None: 
-        from pinecone import PineconeException
-        
+    def upsert(self, records: list[VectorRecord], namespace="") -> None:               
         pinecone_data: list[dict] = self.to_pinecone(records)
         try:
-            self.index.upsert(namespace="", vectors=pinecone_data)         
-        except PineconeException as e:
-            # Handle Pinecone-specific errors
-            print(f"Pinecone error: {e}")
-            raise Exception(e)            
+            self.index.upsert(namespace=namespace, vectors=pinecone_data)                        
         except Exception as e:
             # Handle other errors
             print(f"Unexpected error: {e}")
-            raise Exception(e)
+            raise 
                     
         
     
-    def query(self, vector: list[float], top_k: int = 5) -> None: ... 
+    def query(self, vector: list[float], top_k: int = 5, namespace="")  -> QueryResponse:        
+        try:
+            raw_response = self.index.query(
+                namespace=namespace,
+                vector=vector, 
+                top_k=top_k,
+                include_metadata=True,
+                include_values=False 
+            )
 
+            query_response: QueryResponse = QueryResponse(**raw_response.to_dict())            
+            return query_response                      
+        except Exception as e:
+            # Handle other errors
+            print(f"Unexpected error: {e}")
+            raise 
+        
     def to_pinecone(self, records: list[VectorRecord]) -> list[dict]:
         mapped_data: list[dict] = []
         for rec in records:
