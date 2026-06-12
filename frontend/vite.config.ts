@@ -14,5 +14,9 @@ export default defineConfig({
     alias: {
       '@': path.resolve(__dirname, './src'),
     },
+    // Force a single React instance. With pnpm's symlinked node_modules, Vite can
+    // otherwise resolve react/react-dom as two separate instances (app vs. a dep
+    // like Clerk), which breaks hooks ("Cannot read properties of null (useEffect)").
+    dedupe: ['react', 'react-dom'],
   },
 })

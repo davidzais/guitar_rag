@@ -24,11 +24,13 @@ export async function sendMessage(request: ChatRequest): Promise<ChatResponse> {
     body: JSON.stringify(body),
   })
 
+   console.log( res)
   if (!res.ok) {
     const parsed = ApiErrorSchema.safeParse(await res.json().catch(() => ({})))
     const detail = parsed.success ? parsed.data.detail : 'Request failed'
     throw new ApiError(res.status, detail)
   }
 
+  console.log( "parsing repsone")
   return ChatResponseSchema.parse(await res.json())
 }

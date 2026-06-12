@@ -4,6 +4,7 @@ import { ConversationHeader } from '@/components/chat/ConversationHeader'
 import { MessageList } from '@/components/chat/MessageList'
 import { MessageInput } from '@/components/chat/MessageInput'
 
+
 export const Route = createFileRoute('/')({
   component: ChatPage,
 })
@@ -11,8 +12,8 @@ export const Route = createFileRoute('/')({
 function ChatPage() {
   const { messages, questionsRemaining, mutation, newConversation } = useChat()
 
-  return (
-    <div className="min-h-screen bg-linear-to-br from-slate-100 via-sky-50 to-indigo-100 p-4 sm:p-8 flex justify-center items-start">
+  return (    
+    <div className="min-h-screen bg-linear-to-br from-slate-100 via-sky-50 to-indigo-100 p-4 sm:p-8 flex justify-center items-start">      
       <div className="w-full max-w-2xl">
         <div className="bg-white rounded-2xl shadow-xl border border-slate-200 overflow-hidden">
           <ConversationHeader

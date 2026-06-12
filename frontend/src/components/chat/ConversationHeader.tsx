@@ -1,6 +1,7 @@
 import { Bot, SquarePen } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { SignedIn, UserButton } from '@clerk/clerk-react'
 
 interface Props {
   questionsRemaining: number | null
@@ -16,7 +17,7 @@ export function ConversationHeader({ questionsRemaining, onNewConversation }: Pr
         </div>
         <div>
           <h1 className="text-white font-semibold text-sm leading-tight">
-            Software Engineering Assistant
+            Guitar Tutor! Ask about guitar playing from the Top Players!
           </h1>
           <p className="text-slate-400 text-xs">Powered by Claude</p>
         </div>
@@ -26,7 +27,10 @@ export function ConversationHeader({ questionsRemaining, onNewConversation }: Pr
           <Badge variant={questionsRemaining <= 2 ? 'destructive' : 'secondary'}>
             {questionsRemaining} question{questionsRemaining !== 1 ? 's' : ''} left
           </Badge>
-        )}
+        )}        
+        <SignedIn>
+          <UserButton />
+        </SignedIn>
         <Button
           variant="ghost"
           size="icon"

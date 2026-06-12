@@ -20,7 +20,8 @@ class Retriever:
                     title= m.metadata.title,
                     url=m.metadata.url,
                     instructor=m.metadata.instructor,
-                    start_time=m.metadata.start_time
+                    start_time=m.metadata.start_time,
+                    snippet=m.metadata.text
                 ) 
                 for m in response.matches
             ]       

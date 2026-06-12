@@ -5,6 +5,7 @@ import { MessageBubble } from './MessageBubble'
 import { ApiError } from '@/lib/api'
 import type { Message } from '@/hooks/useChat'
 
+
 interface Props {
   messages: Message[]
   isPending: boolean
@@ -30,7 +31,7 @@ export function MessageList({ messages, isPending, error }: Props) {
       {messages.length === 0 && !isPending && !errorMessage && (
         <div className="flex flex-col items-center justify-center h-full gap-3 text-center">
           <div className="bg-slate-100 rounded-full p-4">
-            <MessageSquare className="size-8 text-slate-400" />
+            <MessageSquare className="size-8 text-slate-400" />            
           </div>
           <p className="text-slate-500 text-sm">
             Your answers will appear here.
