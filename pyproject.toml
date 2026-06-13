@@ -24,6 +24,7 @@ dependencies = [
     "langchain-openai>=1.2.2",
     "langchain-text-splitters>=1.1.2",
     "langchain-core>=1.4.1",
+    "clerk-backend-api>=6.0.1",
 ]
 
 [dependency-groups]

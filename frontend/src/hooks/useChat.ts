@@ -2,6 +2,7 @@ import { useCallback, useState } from 'react'
 import { useMutation } from '@tanstack/react-query'
 import { sendMessage } from '@/lib/api'
 import type { Source } from '@/lib/schemas'
+import { useAuth } from '@clerk/clerk-react'
 
 export interface Message {
   id: string
@@ -11,13 +12,17 @@ export interface Message {
 }
 
 export function useChat() {
+  const { getToken } = useAuth() 
   const [conversationId, setConversationId] = useState(() => crypto.randomUUID())
   const [messages, setMessages] = useState<Message[]>([])
   const [questionsRemaining, setQuestionsRemaining] = useState<number | null>(null)
 
   const mutation = useMutation({
-    mutationFn: (message: string) =>
-      sendMessage({ conversation_id: conversationId, message }),
+    mutationFn: async (message: string) => {
+    const token = await getToken()
+    return sendMessage({ conversation_id: conversationId, message }, token)
+    },
+
     onMutate: (message) => {
       setMessages((prev) => [
         ...prev,
