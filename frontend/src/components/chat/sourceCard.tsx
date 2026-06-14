@@ -11,12 +11,15 @@ export function SourceCard({ source }: { source: Source }) {
         : null
     return (
         <a href={href} target="_blank" rel="noopener noreferrer"
-            className="flex gap-3 border rounded-lg p-3 hover:bg-slate-50 transition-colors">
+            className="flex gap-3 border rounded-lg p-3 hover:bg-slate-200 transition-colors">
             <CirclePlay className="size-4 text-red-500 mt-0.5 shrink-0" />
             <div className="min-w-0">
                 <p className="text-xs text-muted-foreground line-clamp-2 mt-0.5">{source.snippet}</p>
-                <p className="text-xs font-medium truncate">{source.title}</p>               
-                {timestamp && <p className="text-xs text-slate-400 mt-1">{timestamp}</p>}
+                <p className="text-xs font-medium truncate">{source.title}</p>
+                <div className="flex justify-between ">
+                    {timestamp && <span className="text-xs text-slate-400 mt-1">Video Timestamp: {timestamp}</span>}
+                    <span className="text-xs font-medium ">{source.instructor}</span>
+                </div>
             </div>
         </a>
     )
