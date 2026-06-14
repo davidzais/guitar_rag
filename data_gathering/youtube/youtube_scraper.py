@@ -1,10 +1,11 @@
-import json
 import re
-from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_video_id_generator import get_all_video_urls_and_titles
-from data_models import Transcript, Segment
 import http.cookiejar
 import requests
+from youtube_transcript_api import YouTubeTranscriptApi
+from youtube_video_id_generator import get_all_video_urls_and_titles, get_all_video_urls_and_titles_from_search
+from data_models import Transcript, Segment
+from pathlib import Path
+
 
 
 def clean_video_id(url_or_id):
@@ -16,6 +17,13 @@ def clean_video_id(url_or_id):
 
     return url_or_id
 
+def create_session_cookie():
+    session = requests.Session()
+    # Load cookies from exported cookies.txt     
+    session.cookies = http.cookiejar.MozillaCookieJar("cookies.txt")
+    session.cookies.load()
+
+    return session
 
 def download_transcript(video_id, title, presenter, languages=["en"]):
     """Download transcript using the correct API"""
@@ -23,13 +31,8 @@ def download_transcript(video_id, title, presenter, languages=["en"]):
 
     try:
         # Create API instance
-        #session = requests.Session()
-
-# Load cookies from exported cookies.txt
-       
-        # session.cookies = http.cookiejar.MozillaCookieJar("cookies.txt")
-        # session.cookies.load()
-        # api = YouTubeTranscriptApi(http_client=session)
+        #
+        # api = YouTubeTranscriptApi(http_client=create_session_cookie())
         api = YouTubeTranscriptApi()
 
         # Fetch transcript
@@ -102,39 +105,47 @@ def download_transcript(video_id, title, presenter, languages=["en"]):
 #     # Add more video IDs here...
 # ]
 
-VIDEO_IDS = get_all_video_urls_and_titles("@JackRuch")
+#VIDEO_IDS = get_all_video_urls_and_titles("@JackRuch")
+VIDEO_IDS = get_all_video_urls_and_titles_from_search("robben ford guitar lesson",  "robben ford",   50)
 # ========== DOWNLOAD ==========
 print(f"Downloading {len(VIDEO_IDS)} transcripts...\n")
 results = []
 
-for i, (vid, title, presenter) in enumerate(VIDEO_IDS, 1):
-    if i > 5:
-        break
+for i, (vid, title, presenter) in enumerate(VIDEO_IDS, 1):    
     print( vid, title, presenter)
     vid_clean = clean_video_id(vid)
     print(f"[{i}/{len(VIDEO_IDS)}] {vid_clean}")
-
-    result = download_transcript(vid, title, presenter, languages=["en"])
-
-    if result:
-        # Save JSON
-        file_dir = result.instructor.lower().replace(" ", "_").strip()
+    
+    file_dir = presenter.lower().replace(" ", "_").strip()
+    file_path = Path(f"../transcripts/{file_dir}/{vid_clean}.json")
+    print( file_path)
+    file_path.parent.mkdir(parents=True, exist_ok=True)
+    if not file_path.is_file():       
+        result = download_transcript(vid, title, presenter, languages=["en"])
         
-        with open(f"../transcripts/{file_dir}/{result.video_id}.json", "w", encoding="utf-8") as f:            
-            f.write(result.model_dump_json(indent=2, ensure_ascii=False))
-            #json.dump(result, f, indent=2, ensure_ascii=False)
+        if result:
+            # Save JSON
+            #file_dir = result.instructor.lower().replace(" ", "_").strip()
+            
+            with open(file_path, "w", encoding="utf-8") as f:            
+                f.write(result.model_dump_json(indent=2, ensure_ascii=False))
+                #json.dump(result, f, indent=2, ensure_ascii=False)
+            time.sleep(60)
+            # Save TXT
+            # with open(f"{result['video_id']}.txt", "w", encoding="utf-8") as f:
+            #     f.write(f"Video: {result['url']}\n")
+            #     f.write(f"Language: {result['language']}\n\n")
+            #     f.write(result["text"])
 
-        # Save TXT
-        # with open(f"{result['video_id']}.txt", "w", encoding="utf-8") as f:
-        #     f.write(f"Video: {result['url']}\n")
-        #     f.write(f"Language: {result['language']}\n\n")
-        #     f.write(result["text"])
+            # print(f"  Success: {result['char_count']:,} characters")
+            # print(f"  Saved: {result['video_id']}.json, {result['video_id']}.txt")
+            # print(f"  Preview: {result['text'][:100]}...")
+            # results.append(result)
 
-        # print(f"  Success: {result['char_count']:,} characters")
-        # print(f"  Saved: {result['video_id']}.json, {result['video_id']}.txt")
-        # print(f"  Preview: {result['text'][:100]}...")
-        # results.append(result)
-
-    print()
+        else:
+            file_path.unlink(missing_ok=True) 
+    else:
+        print(f"file {file_path} already exists")
+   
 
 print(f"\nComplete: {len(results)}/{len(VIDEO_IDS)} transcripts downloaded")
