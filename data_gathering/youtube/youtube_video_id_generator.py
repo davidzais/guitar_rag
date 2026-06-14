@@ -1,9 +1,13 @@
 import requests
+import os
+from dotenv import load_dotenv
 
-API_KEY = "YOUR_API_KEY"
+load_dotenv()
+
+API_KEY = os.getenv( "YOUTUBE_API_KEY", default="")
 HANDLE_ID = "@JackRuch"  # e.g. UC_x5XG1OV2P6uZZ5FSM9Ttw
 
-def get_all_video_urls_and_titles(handle_id: str, api_key: str = None):
+def get_all_video_urls_and_titles(handle_id: str):
     video_data: list[tuple] = []
     next_page_token = None
 
@@ -12,7 +16,7 @@ def get_all_video_urls_and_titles(handle_id: str, api_key: str = None):
     channel_params = {
         "part": "contentDetails,snippet",
         "forHandle": handle_id,
-        "key": "AIzaSyBN9P7q582lbsUIHV-jJop_GjYqV_ilXK4",
+        "key": API_KEY,
     }
     res = requests.get(channel_url, params=channel_params).json()
 
@@ -28,7 +32,7 @@ def get_all_video_urls_and_titles(handle_id: str, api_key: str = None):
             "part": "contentDetails,snippet",
             "playlistId": uploads_playlist_id,
             "maxResults": 50,  # max allowed per page
-            "key": "AIzaSyBN9P7q582lbsUIHV-jJop_GjYqV_ilXK4",
+            "key": API_KEY,
         }
         if next_page_token:
             playlist_params["pageToken"] = next_page_token
@@ -46,8 +50,30 @@ def get_all_video_urls_and_titles(handle_id: str, api_key: str = None):
 
     return video_data
 
+def get_all_video_urls_and_titles_from_search(query: str,  presenter: str, max_results: int = 50):
+    video_data: list[tuple] = []
+    url = "https://www.googleapis.com/youtube/v3/search"
+    params = {
+        "part": "snippet",
+        "q": query,
+        "type": "video",
+        "maxResults": min(50, max_results),
+        "key": API_KEY
+    }
 
-video_data = get_all_video_urls_and_titles(HANDLE_ID, API_KEY)
+    res = requests.get(url, params=params)
+    res_json = res.json()
+  
+    for item in res_json.get("items", []):
+        video_id = item.get("id", {}).get("videoId")
+        if not video_id:
+            continue
+                               
+        video_data.append((video_id,item["snippet"]["title"],presenter))
+
+    return video_data
+
+video_data = get_all_video_urls_and_titles(HANDLE_ID)
 if __name__ == "__main__" :
     print(f"Found {len(video_data)} videos")
     for vid, title, owner in video_data:

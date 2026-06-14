@@ -47,7 +47,7 @@ def main():
                         vector=vec,
                         metadata={
                         "text": chunk.text,
-                        "instructor": chunk.instructor,
+                        "instructor": chunk.instructor.title(),
                         "video_id": chunk.video_id,
                         "title": chunk.title,
                         "url": chunk.url,
