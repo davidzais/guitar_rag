@@ -14,22 +14,31 @@ export class ApiError extends Error {
 
 export async function sendMessage(request: ChatRequest, token: string | null): Promise<ChatResponse> {
   const body = ChatRequestSchema.parse(request)
-  
-  const res = await fetch(`${API_BASE}/chat`, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(token ? { Authorization: `Bearer ${token}` } : {}),
-    },
-    body: JSON.stringify(body),
-  })
+  let res: Response
+  try {
+          res = await fetch(`${API_BASE}/chat`, {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            ...(token ? { Authorization: `Bearer ${token}` } : {}),
+          },
+          body: JSON.stringify(body),
+          signal: AbortSignal.timeout(90_000), //set a 90 second limit and then abort
+          
+        })
+      }
+      catch(err) {
+         if (err instanceof DOMException && err.name === 'TimeoutError') {
+             throw new ApiError(408, 'This is taking longer than expected — the app may be waking up. Please try again.')
+         }
+         throw err
+      }
   
   if (!res.ok) {
     const parsed = ApiErrorSchema.safeParse(await res.json().catch(() => ({})))
     const detail = parsed.success ? parsed.data.detail : 'Request failed'
     throw new ApiError(res.status, detail)
   }
-
-  console.log( "parsing repsone")
+ 
   return ChatResponseSchema.parse(await res.json())
 }
