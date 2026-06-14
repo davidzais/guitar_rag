@@ -1,5 +1,6 @@
 from langchain_anthropic import ChatAnthropic
 from langchain_ollama import ChatOllama
+from langchain_groq import ChatGroq
 from langchain_core.language_models import BaseChatModel
 from dotenv import load_dotenv
 import os
@@ -15,5 +16,10 @@ def get_llm() -> BaseChatModel:
                              )
         case "anthropic":
             return ChatAnthropic(model="claude-haiku-4-5-20251001", max_tokens=1024)
+        case "groq":
+            return ChatGroq(
+                model=os.getenv("GROQ_MODEL", "llama-3.1-8b-instant"),
+                temperature=0 # deterministic — grounded for RAG.
+                )
         case _:
             raise ValueError(f"Unknown LLM Provider: {provider}")
