@@ -21,6 +21,9 @@ data_gathering/transcripts/
 rag_plan.md
 todos.md
 
+# Generated doc exports (e.g. Markdown-PDF export of todos.md) — not source
+*.pdf
+
 # Local Claude Code guidance (personal training process — read from disk, not committed)
 CLAUDE.md
 .claude/
