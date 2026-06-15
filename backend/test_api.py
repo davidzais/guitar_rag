@@ -3,12 +3,12 @@ from unittest.mock import MagicMock, patch
 from fastapi.testclient import TestClient
 
 # conftest.py has already stubbed the heavy imports before this module loads.
-from api import app
+from api import app, verify_clerk_user, limiter
 from services import chat_service
 from services.chat_service import question_counts
 
 client = TestClient(app)
-
+FAKE_CONTEXT = "CTX"
 
 def make_invoke_result(reply: str) -> dict:
     msg = MagicMock()
@@ -22,7 +22,31 @@ def reset_state():
     question_counts.clear()
     yield
 
+@pytest.fixture(autouse=True)
+def disable_rate_limit():
+    limiter.enabled = False
+    yield
+    limiter.enabled = True
 
+@pytest.fixture(autouse=True)
+def bypass_auth():
+    # /chat requires a valid Clerk JWT via verify_clerk_user. Override that
+    # dependency so the endpoint treats every test request as authenticated —
+    # no real token/Clerk client needed. (dependency_overrides is FastAPI's
+    # official test seam; production wiring is untouched.)
+    app.dependency_overrides[verify_clerk_user] = lambda: "test-user-id"
+    app.dependency_overrides[verify_clerk_user] = lambda: "test-user-id"
+    yield
+    app.dependency_overrides.clear()
+
+@pytest.fixture(autouse=True)
+def mock_retriever():
+    # chat() calls get_retriever().retrieve(); stub it so no real OpenAI/Pinecone
+    # client is built. Default context is fine for every test except the one that
+    # asserts the augmented prompt.
+    with patch.object(chat_service, "get_retriever") as mock_get:
+        mock_get.return_value.retrieve.return_value = (FAKE_CONTEXT, [])
+        yield mock_get
 # ---------------------------------------------------------------------------
 # Happy-path
 # ---------------------------------------------------------------------------
@@ -98,10 +122,11 @@ def test_question_limit_does_not_affect_other_conversations(mock_agent):
 def test_agent_called_with_correct_thread_id(mock_agent):
     mock_agent.invoke.return_value = make_invoke_result("answer")
     client.post(
-        "/chat", json={"conversation_id": "my-thread", "message": "what is Python?"}
+        "/chat", json={"conversation_id": "my-thread", "message": "how to use arepeggios?"}
     )
+    augmented = f"Context from guitar transcripts:\n\n{FAKE_CONTEXT}\n\nQuestion: how to use arepeggios?"
     mock_agent.invoke.assert_called_once_with(
-        {"messages": [{"role": "user", "content": "what is Python?"}]},
+        {"messages": [{"role": "user", "content": augmented}]},
         config={"configurable": {"thread_id": "my-thread"}},
     )
 
