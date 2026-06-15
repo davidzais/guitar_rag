@@ -1,14 +1,14 @@
 import structlog
-
 from agent import agent, MAX_QUESTIONS
 from exceptions import LimitExceededError
 from models.chat import ChatRequest, ChatResponse
 from rag.retriever import Retriever
+from functools import cache
 
 logger = structlog.get_logger()
 
 question_counts: dict[str, int] = {}
-retriever = Retriever()
+
 
 def chat(request: ChatRequest) -> ChatResponse:
     count = question_counts.get(request.conversation_id, 0)
@@ -18,7 +18,7 @@ def chat(request: ChatRequest) -> ChatResponse:
     try:
         # first get the relevent data from the vector stor
        
-        text, sources = retriever.retrieve( request.message )
+        text, sources = get_retriever().retrieve( request.message )
 
         #augmented is the context data from the vector db AND the question for the llm
         augmented = f"Context from guitar transcripts:\n\n{text}\n\nQuestion: {request.message}"
@@ -42,3 +42,9 @@ def chat(request: ChatRequest) -> ChatResponse:
     except Exception:
         logger.error("agent_invocation_failed", exc_info=True)
         raise
+
+#this annotation calls Retriever() once and then stores 
+#it in cache and returns it from cache in subsequent calls   
+@cache
+def get_retriever():    
+    return Retriever()

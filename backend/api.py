@@ -1,5 +1,6 @@
 import os
 import structlog
+from functools import cache
 from fastapi import Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
@@ -27,7 +28,7 @@ _cors_origins = [
 _rate_limit = os.getenv("RATE_LIMIT", "20/minute")
 
 limiter = Limiter(key_func=get_remote_address)
-clerk = Clerk(bearer_auth=os.environ["CLERK_SECRET_KEY"])
+
 
 app = FastAPI(title="Guitar Tutor API")
 app.state.limiter = limiter
@@ -44,7 +45,7 @@ app.add_middleware(
 
 
 def verify_clerk_user(request: Request,  _credentials=Depends(bearer_scheme)) -> str:
-    state = clerk.authenticate_request(request, 
+    state = get_clerk().authenticate_request(request, 
                                        AuthenticateRequestOptions(authorized_parties=_cors_origins))
     payload = state.payload
     if not state.is_signed_in or payload is None:
@@ -69,3 +70,12 @@ def chat(request: Request, body: ChatRequest):
     except Exception:
         logger.error("unhandled_error", exc_info=True)
         raise HTTPException(status_code=500, detail="Internal server error")
+
+
+# @cache makes this lazy: the Clerk client is built on first call, not at import.
+# If instead we had `clerk = Clerk(bearer_auth=os.environ["CLERK_SECRET_KEY"])` at
+# module top-level, just importing this module would construct it — and crash without
+# a .env. Lazy loading means tests can import the module with no secrets present.
+@cache
+def get_clerk():
+   return Clerk(bearer_auth=os.environ["CLERK_SECRET_KEY"])
