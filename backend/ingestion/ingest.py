@@ -11,7 +11,7 @@ from vector_store import VectorRecord, VectorStore, get_vector_store_provider
 
 def load_data_filelist() -> list[Path]:
     target_dir = Path(__file__).resolve().parents[2] / "data_gathering/transcripts/"
-    files = [f for f in Path(target_dir).rglob("*") if f.is_file()]
+    files = [f for f in Path(target_dir).rglob("*.json") if f.is_file()]
 
     return files
 

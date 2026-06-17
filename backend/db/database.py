@@ -5,9 +5,18 @@ from sqlalchemy.dialects.postgresql import JSONB
 from functools import cache
 from dotenv import load_dotenv
 import os
+from enum import Enum
 
 load_dotenv()
 
+
+
+
+class Status(Enum):
+    UNKNOWN = "UNKNOWN"
+    SCRAPED = "SCRAPED"
+    INGESTED = "INGESTED"
+    FAILED = "FAILED"
 # this seems redundant here, but it acutally serves a purpose. Every class that
 # inherits from DeclarativeBase creates its own private Registry and metadata
 # this forces all classes to share one registry. That way calling Base.metada.create_all
@@ -26,12 +35,13 @@ class Transcript(Base):
     title: Mapped[str]
     url: Mapped[str]
     payload: Mapped[dict] = mapped_column(JSONB)
+    status: Mapped[str] = mapped_column(default=Status.UNKNOWN)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+
 
 def init_db():
     #Base.metadata.drop_all(get_engine())   # dev only — wipes the table
     Base.metadata.create_all(get_engine())
-
 
 
 @cache
