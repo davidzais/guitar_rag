@@ -2,9 +2,11 @@ import re
 import http.cookiejar
 import requests
 from youtube_transcript_api import YouTubeTranscriptApi
-from youtube_video_id_generator import get_all_video_urls_and_titles, get_all_video_urls_and_titles_from_search
-from data_models import Transcript, Segment
+from youtube.youtube_video_id_generator import get_all_video_urls_and_titles, get_all_video_urls_and_titles_from_search
+from youtube.data_models import Transcript, Segment
 from pathlib import Path
+from db import video_id_exists
+import time
 
 
 
@@ -72,14 +74,7 @@ def download_transcript(video_id, title, presenter, languages=["en"]):
             char_count = len(full_text),
             segments = [Segment(**s) for s in segments_data]
         )
-        
-     
-        print (transcript)
-        # Combine all text
-        
 
-       
-       
         
         return transcript
         # return {
@@ -105,8 +100,8 @@ def download_transcript(video_id, title, presenter, languages=["en"]):
 #     # Add more video IDs here...
 # ]
 
-#VIDEO_IDS = get_all_video_urls_and_titles("@JackRuch")
-VIDEO_IDS = get_all_video_urls_and_titles_from_search("robben ford guitar lesson",  "robben ford",   50)
+VIDEO_IDS = get_all_video_urls_and_titles("@JackRuch")
+#VIDEO_IDS = get_all_video_urls_and_titles_from_search("robben ford guitar lesson",  "robben ford",   50)
 # ========== DOWNLOAD ==========
 print(f"Downloading {len(VIDEO_IDS)} transcripts...\n")
 results = []
@@ -114,6 +109,12 @@ results = []
 for i, (vid, title, presenter) in enumerate(VIDEO_IDS, 1):    
     print( vid, title, presenter)
     vid_clean = clean_video_id(vid)
+    
+    if video_id_exists( vid_clean):
+        print(f"video id {vid_clean} is already in the database, not downloading")
+        continue
+
+
     print(f"[{i}/{len(VIDEO_IDS)}] {vid_clean}")
     
     file_dir = presenter.lower().replace(" ", "_").strip()
@@ -123,27 +124,14 @@ for i, (vid, title, presenter) in enumerate(VIDEO_IDS, 1):
     if not file_path.is_file():       
         result = download_transcript(vid, title, presenter, languages=["en"])
         
-        if result:
-            # Save JSON
-            #file_dir = result.instructor.lower().replace(" ", "_").strip()
-            
+        if result:                        
             with open(file_path, "w", encoding="utf-8") as f:            
-                f.write(result.model_dump_json(indent=2, ensure_ascii=False))
-                #json.dump(result, f, indent=2, ensure_ascii=False)
-            time.sleep(60)
-            # Save TXT
-            # with open(f"{result['video_id']}.txt", "w", encoding="utf-8") as f:
-            #     f.write(f"Video: {result['url']}\n")
-            #     f.write(f"Language: {result['language']}\n\n")
-            #     f.write(result["text"])
-
-            # print(f"  Success: {result['char_count']:,} characters")
-            # print(f"  Saved: {result['video_id']}.json, {result['video_id']}.txt")
-            # print(f"  Preview: {result['text'][:100]}...")
-            # results.append(result)
+                f.write(result.model_dump_json(indent=2, ensure_ascii=False))                                     
 
         else:
             file_path.unlink(missing_ok=True) 
+
+        time.sleep(60)
     else:
         print(f"file {file_path} already exists")
    

@@ -1,10 +1,14 @@
 from pathlib import Path
 import json
+import structlog
 from models.transcript import Transcript
 from ingestion.chunker import chunk_transcript, filter_transcript
 from embeddings.embeddings import get_embedding_provider, EmbeddingProvider
 from vector_store import VectorRecord, VectorStore, get_vector_store_provider
+from db.db_service import is_transcript_ingested, mark_ingested
 
+
+logger = structlog.get_logger()
 
 
     
@@ -24,15 +28,20 @@ def load_transcript(path: Path) -> Transcript:
     
 
 def main():
-    print('beginning embedding run')
+    logger.info('beginning embedding run')
     file_list = load_data_filelist()
-    print(f"have {len(file_list)} transcripts to process")
+    logger.info(f"have {len(file_list)} transcripts to process")
     embedding_provider: EmbeddingProvider = get_embedding_provider()
     vector_store_provider: VectorStore = get_vector_store_provider()
     total_messagees = 0
     for path in file_list:
         try:
             transcript = load_transcript(path)
+
+            if is_transcript_ingested(transcript.video_id):
+                logger.info(f"video_id: {transcript.video_id} is already in the database")
+                continue
+
             transcript.segments = filter_transcript(transcript.segments)
             chunks = chunk_transcript(transcript)
             chunk_list = [chunks[i:i +100] for i in  range(0, len(chunks), 100)]                          
@@ -60,11 +69,13 @@ def main():
                 vector_store_provider.upsert( records) 
                 total_messagees += len(records)                    
             
+            mark_ingested(transcript.video_id) 
+            
         except Exception as e:
-            print(str(e))
+            logger.info(str(e))
 
-    print(f"sendsenting {total_messagees} to vector database")
-    print('completed embedding run')
+    logger.info(f"sendsenting {total_messagees} to vector database")
+    logger.info('completed embedding run')
 
 
 if __name__ == "__main__":

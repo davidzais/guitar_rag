@@ -1,5 +1,6 @@
 from models.transcript import Transcript as TranscriptDoc
 from db.database import get_engine, Transcript, Status
+from sqlalchemy import select, update
 from sqlalchemy.orm import Session
 from sqlalchemy.dialects.postgresql import insert
 import structlog
@@ -28,7 +29,22 @@ def add_transcripts(rows: list[TranscriptDoc]) -> None:
             logger.error("add_transcripts failed", exc_info=True)
             raise
 
-
+def is_transcript_ingested(video_id: str) -> bool:
+     with Session(get_engine()) as session:
+         stmt = select(Transcript.id).where( Transcript.video_id == video_id, Transcript.status == Status.INGESTED)
+         return session.scalars(stmt).first() is not None
+      
+def mark_ingested(video_id) -> None:
+     with Session(get_engine()) as session:
+        try:
+            stmt = update(Transcript).where(Transcript.video_id == video_id).values(status=Status.INGESTED)
+            session.execute(stmt)
+            session.commit()
+        except Exception:
+            logger.error("mark_ingested failed", exc_info=True)
+            raise
+      
+        
 # map the pydantic version of the transcript to the database object TranscriptDoc -> Transcript
 def to_values(doc: TranscriptDoc) -> dict:
     return {
