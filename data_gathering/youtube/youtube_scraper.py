@@ -118,8 +118,8 @@ for i, (vid, title, presenter) in enumerate(VIDEO_IDS, 1):
     print(f"[{i}/{len(VIDEO_IDS)}] {vid_clean}")
     
     file_dir = presenter.lower().replace(" ", "_").strip()
-    file_path = Path(f"../transcripts/{file_dir}/{vid_clean}.json")
-    print( file_path)
+    file_path = Path(__file__).resolve().parent.parent / "transcripts" / file_dir / f"{vid_clean}.json"    
+    
     file_path.parent.mkdir(parents=True, exist_ok=True)
     if not file_path.is_file():       
         result = download_transcript(vid, title, presenter, languages=["en"])
