@@ -17,6 +17,8 @@ class Status(Enum):
     SCRAPED = "SCRAPED"
     INGESTED = "INGESTED"
     FAILED = "FAILED"
+    CLASSIFIED_KEEP = "CLASSIFIED_KEEP"
+    CLASSIFIED_REJECT = "CLASSIFIED_REJECT"
 # this seems redundant here, but it acutally serves a purpose. Every class that
 # inherits from DeclarativeBase creates its own private Registry and metadata
 # this forces all classes to share one registry. That way calling Base.metada.create_all
@@ -37,6 +39,7 @@ class Transcript(Base):
     payload: Mapped[dict] = mapped_column(JSONB)
     status: Mapped[str] = mapped_column(default=Status.UNKNOWN)
     created_at: Mapped[datetime] = mapped_column(DateTime(timezone=True), server_default=func.now())
+    reject_reason: Mapped[str | None] = mapped_column(default=None)
 
 
 def init_db():

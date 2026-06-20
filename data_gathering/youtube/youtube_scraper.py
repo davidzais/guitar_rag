@@ -5,7 +5,7 @@ from youtube_transcript_api import YouTubeTranscriptApi
 from youtube.youtube_video_id_generator import get_all_video_urls_and_titles, get_all_video_urls_and_titles_from_search
 from youtube.data_models import Transcript, Segment
 from pathlib import Path
-from db import video_id_exists
+from db import video_id_exists, add_transcript
 import time
 
 
@@ -126,8 +126,9 @@ for i, (vid, title, presenter) in enumerate(VIDEO_IDS, 1):
         
         if result:                        
             with open(file_path, "w", encoding="utf-8") as f:            
-                f.write(result.model_dump_json(indent=2, ensure_ascii=False))                                     
-
+                f.write(result.model_dump_json(indent=2, ensure_ascii=False))                     
+                                              
+            add_transcript(result ) 
         else:
             file_path.unlink(missing_ok=True) 
 

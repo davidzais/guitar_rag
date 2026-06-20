@@ -5,7 +5,7 @@ from models.transcript import Transcript
 from ingestion.chunker import chunk_transcript, filter_transcript
 from embeddings.embeddings import get_embedding_provider, EmbeddingProvider
 from vector_store import VectorRecord, VectorStore, get_vector_store_provider
-from db.db_service import is_transcript_ingested, mark_ingested
+from db.db_service import is_keep, mark_ingested
 
 
 logger = structlog.get_logger()
@@ -27,19 +27,20 @@ def load_transcript(path: Path) -> Transcript:
 
     
 
-def main():
+def run_ingest():
     logger.info('beginning embedding run')
     file_list = load_data_filelist()
     logger.info(f"have {len(file_list)} transcripts to process")
     embedding_provider: EmbeddingProvider = get_embedding_provider()
     vector_store_provider: VectorStore = get_vector_store_provider()
     total_messagees = 0
+    total_transcripts_processed = 0
     for path in file_list:
         try:
             transcript = load_transcript(path)
 
-            if is_transcript_ingested(transcript.video_id):
-                logger.info(f"video_id: {transcript.video_id} is already in the database")
+            if not is_keep(transcript.video_id):
+                logger.info(f"skipping {transcript.video_id} — not in CLASSIFIED_KEEP")
                 continue
 
             transcript.segments = filter_transcript(transcript.segments)
@@ -70,13 +71,13 @@ def main():
                 total_messagees += len(records)                    
             
             mark_ingested(transcript.video_id) 
-            
+            total_transcripts_processed += 1
         except Exception as e:
             logger.info(str(e))
 
-    logger.info(f"sendsenting {total_messagees} to vector database")
-    logger.info('completed embedding run')
+    logger.info(f"senting {total_messagees} to vector database")
+    logger.info(f"completed embedding run with {total_transcripts_processed} transcripts processed")
 
 
 if __name__ == "__main__":
-    main()
+    run_ingest()
