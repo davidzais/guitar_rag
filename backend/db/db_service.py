@@ -32,6 +32,11 @@ def add_transcripts(rows: list[TranscriptDoc]) -> None:
 def is_transcript_ingested(video_id: str) -> bool:
      with Session(get_engine()) as session:
          stmt = select(Transcript.id).where( Transcript.video_id == video_id, Transcript.status == Status.INGESTED)
+         return session.scalars(stmt).first() is not None     
+
+def is_keep(video_id: str) -> bool:
+     with Session(get_engine()) as session:
+         stmt = select(Transcript.id).where( Transcript.video_id == video_id, Transcript.status == Status.CLASSIFIED_KEEP)
          return session.scalars(stmt).first() is not None
       
 def mark_ingested(video_id) -> None:
@@ -43,8 +48,22 @@ def mark_ingested(video_id) -> None:
         except Exception:
             logger.error("mark_ingested failed", exc_info=True)
             raise
-      
+
+def get_scraped() -> list[Transcript]:
+    with Session(get_engine()) as session:
+        stmt = select(Transcript).where( Transcript.status == Status.SCRAPED)
+        return list(session.scalars(stmt).all())
         
+def mark_classified(video_id: str, status: Status, reject_reason: str | None = None) -> None:
+     with Session(get_engine()) as session:
+        try:
+            stmt = update(Transcript).where(Transcript.video_id == video_id).values(status=status, reject_reason=reject_reason)
+            session.execute(stmt)
+            session.commit()
+        except Exception:
+            logger.error("mark_classified failed", exc_info=True)
+            raise
+
 # map the pydantic version of the transcript to the database object TranscriptDoc -> Transcript
 def to_values(doc: TranscriptDoc) -> dict:
     return {
